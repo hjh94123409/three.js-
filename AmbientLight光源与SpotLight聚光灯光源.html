@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="webgl-output"></div>
+    <div id="myStats"></div>
+    <script type="module">
+        import {
+                Scene,
+                PerspectiveCamera,
+                WebGLRenderer,
+                BoxGeometry,
+                MeshBasicMaterial,
+                Mesh,
+                AxesHelper,
+                PlaneGeometry,
+                MeshLambertMaterial,
+                AmbientLight,
+                SpotLight,
+                Vector2,
+                Color,
+                Fog,
+                FogExp2,
+                OrthographicCamera,
+                SpotLightHelper,
+                CameraHelper
+            } from "./libs/Three.js";
+
+            import Stats from "./libs/stats/stats.module.js";
+
+            import dat from "./libs/dat.gui/dat.gui.module.js";
+
+            // console.log(dat);
+
+            const scene = new Scene();
+
+            //雾化效果
+            // scene.fog = new Fog(0xff0000, 0.01, 100)
+            // scene.fog = new FogExp2(0xffffff, 0.01)
+            // scene.overrideMaterial = new MeshLambertMaterial({color: 0x0000ff})
+
+ 
+            let camera = new PerspectiveCamera(
+                75, //能看到的视角
+                window.innerWidth / window.innerHeight, //渲染的长宽比
+                0.1, 
+                1000 //场景渲染的最远位置
+            );
+
+            // let camera = new OrthographicCamera(
+            //     window.innerWidth / -16, //渲染部分的左边界
+            //     window.innerWidth / 16,//渲染部分的右边界
+            //     window.innerHeight / 16,//渲染部分的上边界
+            //     window.innerHeight / -16,//渲染部分的下边界
+            //     -200, //近面距离 相机所处位置从该点开始渲染
+            //     500 //远面距离，相机所处位置从该点停止渲染
+            // )
+
+
+            camera.position.x = -30;
+            camera.position.y = 140;
+            camera.position.z = 30;
+            camera.lookAt(scene.position);
+
+            const render = new WebGLRenderer();
+            render.setSize(window.innerWidth, window.innerHeight);
+            render.shadowMap.enabled = true;
+
+            document
+                .getElementById("webgl-output")
+                .appendChild(render.domElement);
+
+            const axes = new AxesHelper(50);
+            scene.add(axes);
+
+            const planeGeometry = new PlaneGeometry(100, 100);
+            const planeMaterial = new MeshLambertMaterial({ color: 0xcccccc });
+            const plane = new Mesh(planeGeometry, planeMaterial);
+            plane.rotation.x = -0.5 * Math.PI;
+            plane.position.set(15, 0, 0);
+            plane.receiveShadow = true;
+            scene.add(plane);
+
+            //
+            const ambienLight = new AmbientLight(0xaaaaaa, 1);
+            scene.add(ambienLight);
+
+            // 光照颜色， 光照强度，光源发出光的最大距离, 光线散射角度，聚光锥的半影衰减百分比，沿着光照距离的衰减量
+            const spotLight = new SpotLight(0xffffff);
+            spotLight.position.set(-60, 30, -65);
+            spotLight.castShadow = true;
+            spotLight.shadow.mapSize = new Vector2(1024, 1024);
+            spotLight.shadow.camera.far = 130;
+            spotLight.shadow.camera.near = 40;
+            scene.add(spotLight);
+
+            const lightHelper = new SpotLightHelper(spotLight)
+            scene.add(lightHelper)
+
+            // console.log(spotLight.shadow);
+
+            const shadowCameraHelper = new CameraHelper(spotLight.shadow.camera)
+            scene.add(shadowCameraHelper)
+
+            
+            const geometry = new BoxGeometry(8,8,8)
+            const material = new MeshLambertMaterial({color: 0x002288})
+            const cube = new Mesh(geometry, material)
+            cube.castShadow = true
+            cube.position.set(0, 8, 0)
+            scene.add(cube)
+
+
+            const ctrlObj = {
+                ambienLight_intensity: 1,
+                ambienLight_color: 0xffffff,
+
+                spotLight_intensity: 1,
+                spotLight_color: 0xffffff,
+                spotLight_distance: 0,
+                spotLight_angle: Math.PI / 3,
+                spotLight_penumbra: 0,
+                spotLight_decay: 0
+            }
+
+            const ctrl = new dat.GUI()
+            const ambienLightFolder = ctrl.addFolder('ambienLight')
+            ambienLightFolder.add(ctrlObj, 'ambienLight_intensity', 0, 5)
+            ambienLightFolder.addColor(ctrlObj, 'ambienLight_color').onChange((clr) => {
+                ambienLight.color = new Color(clr)
+            })
+
+            const spotLightFolder = ctrl.addFolder('spotLight')
+            spotLightFolder.add(ctrlObj, 'spotLight_intensity', 0, 5)
+            spotLightFolder.addColor(ctrlObj, 'spotLight_color').onChange((clr) => {
+                spotLight.color = new Color(clr)
+            })
+            spotLightFolder.add(ctrlObj, 'spotLight_distance', 0, 1000).onChange((dis) => {
+                spotLight.distance = dis
+            })
+            spotLightFolder.add(ctrlObj, 'spotLight_angle', 0, Math.PI * 2).onChange((angle) => {
+                spotLight.angle = angle
+            })
+            spotLightFolder.add(ctrlObj, 'spotLight_penumbra', 0, 1).onChange((pen) => {
+                spotLight.penumbra = pen
+            })
+            spotLightFolder.add(ctrlObj, 'spotLight_decay', 0, 5).onChange((decay) => {
+                spotLight.decay = decay
+            })
+
+
+            const renderScene = () => {
+
+                lightHelper.update()
+                shadowCameraHelper.update()
+
+
+                ambienLight.intensity = ctrlObj.ambienLight_intensity
+                spotLight.intensity = ctrlObj.spotLight_intensity
+
+                render.render(scene, camera);
+
+                requestAnimationFrame(renderScene);
+            }
+            renderScene()
+
+            const onWindowResize = () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                render.setSize(window.innerWidth, window.innerHeight);
+            };
+
+            window.addEventListener("resize", onWindowResize);
+
+        </script>
+</body>
+
+</html>
