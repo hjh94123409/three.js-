@@ -80,13 +80,13 @@
                 plane = new THREE.Mesh(planeGeometry, planeMaterial)
                 scene.add(plane)
             })
-            ctrl.add(ctrlObj, 'widthSegments', 0, 20).onChange(() => {
+            ctrl.add(ctrlObj, 'widthSegments', 1, 20).onChange(() => {
                 scene.remove(plane)
                 planeGeometry = new THREE.PlaneGeometry(ctrlObj.width, ctrlObj.height, ctrlObj.widthSegments, ctrlObj.heightSegments)
                 plane = new THREE.Mesh(planeGeometry, planeMaterial)
                 scene.add(plane)
             })
-            ctrl.add(ctrlObj, 'heightSegments', 0, 20).onChange(() => {
+            ctrl.add(ctrlObj, 'heightSegments', 1, 20).onChange(() => {
                 scene.remove(plane)
                 planeGeometry = new THREE.PlaneGeometry(ctrlObj.width, ctrlObj.height, ctrlObj.widthSegments, ctrlObj.heightSegments)
                 plane = new THREE.Mesh(planeGeometry, planeMaterial)
