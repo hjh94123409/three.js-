@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+        <style>
+            body {
+                margin: 0;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="webgl-output"></div>
+        <script type="module">
+            import * as THREE from "./libs/build/three.module.js";
+
+            import { GLTFLoader } from './libs/loaders/GLTFLoader.js'
+
+            import { OrbitControls } from './libs/controls/OrbitControls.js'
+
+            import { RectAreaLightUniformsLib } from './libs/lights/RectAreaLightUniformsLib.js'
+
+            import { RectAreaLightHelper } from './libs/helpers/RectAreaLightHelper.js'
+
+            import Stats from "./libs/stats/stats.module.js";
+
+            import dat from "./libs/dat.gui/dat.gui.module.js";
+
+            // console.log(dat);
+
+            const scene = new THREE.Scene();
+
+            let camera = new THREE.PerspectiveCamera(
+                75, //能看到的视角
+                window.innerWidth / window.innerHeight, //渲染的长宽比
+                0.1,
+                1000 //场景渲染的最远位置
+            );
+
+            camera.position.x = -15;
+            camera.position.y = 20;
+            camera.position.z = 15;
+            camera.lookAt(scene.position);
+
+            const render = new THREE.WebGLRenderer();
+            render.setSize(window.innerWidth, window.innerHeight);
+            render.shadowMap.enabled = true;
+
+            document
+                .getElementById("webgl-output")
+                .appendChild(render.domElement);
+
+            const axes = new THREE.AxesHelper(50);
+            scene.add(axes);
+
+            //平面光光源
+            RectAreaLightUniformsLib.init()
+            const rectLight = new THREE.RectAreaLight(0xff00000, 5, 4, 10) // 颜色 亮度，宽度，高度
+            rectLight.position.set(0,0,0)
+            scene.add(rectLight)
+
+            //
+            const geoFloor = new THREE.BoxGeometry(2000, 0.1, 2000)
+            const matStdFloor = new THREE.MeshStandardMaterial({
+                color: 0xff0000,
+                roughness: 0.5,
+                metalness: 0.5
+            })
+            console.log(matStdFloor);
+            const meshFloor = new THREE.Mesh(geoFloor, matStdFloor)
+            scene.add(meshFloor)
+
+            //
+            const rectAreaHelper = new RectAreaLightHelper(rectLight)
+            scene.add(rectAreaHelper)
+
+            
+
+
+            const ctrlObj = {
+                rectAreaColor: 0xff0000,
+                rectAreaIntensity: 1
+            }
+            const ctrl = new dat.GUI()
+            const rectAreaFolder = ctrl.addFolder('rectAreaLight')
+            rectAreaFolder.addColor(ctrlObj, 'rectAreaColor').onChange((crl) => {
+                rectLight.color = new THREE.Color(crl)
+            })
+            rectAreaFolder.add(ctrlObj, 'rectAreaIntensity', 0, 10).onChange((int) => {
+                rectLight.intensity = int
+            })
+            
+
+            
+
+
+            //创建轨道控制器
+            const orbitControls = new OrbitControls(camera, render.domElement)
+            orbitControls.update()
+
+
+
+
+            let pos = 0
+            const renderScene = () => {
+
+                orbitControls.update()
+
+                render.render(scene, camera);
+                
+                requestAnimationFrame(renderScene);
+            };
+            renderScene();
+
+            const onWindowResize = () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                render.setSize(window.innerWidth, window.innerHeight);
+            };
+
+            window.addEventListener("resize", onWindowResize);
+
+
+            
+
+
+        </script>
+    </body>
+</html>
