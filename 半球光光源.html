@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+        <style>
+            body {
+                margin: 0;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="webgl-output"></div>
+        <script type="module">
+            import * as THREE from "./libs/build/three.module.js";
+
+            import { GLTFLoader } from './libs/loaders/GLTFLoader.js'
+
+            import {OrbitControls} from './libs/controls/OrbitControls.js'
+
+            import Stats from "./libs/stats/stats.module.js";
+
+            import dat from "./libs/dat.gui/dat.gui.module.js";
+
+            // console.log(dat);
+
+            const scene = new THREE.Scene();
+
+            let camera = new THREE.PerspectiveCamera(
+                75, //能看到的视角
+                window.innerWidth / window.innerHeight, //渲染的长宽比
+                0.1,
+                1000 //场景渲染的最远位置
+            );
+
+            camera.position.x = -6;
+            camera.position.y = 8;
+            camera.position.z = 6;
+            camera.lookAt(scene.position);
+
+            const render = new THREE.WebGLRenderer();
+            render.setSize(window.innerWidth, window.innerHeight);
+            render.shadowMap.enabled = true;
+
+            document
+                .getElementById("webgl-output")
+                .appendChild(render.domElement);
+
+            const axes = new THREE.AxesHelper(50);
+            scene.add(axes);
+
+            const loadModel = () => {
+                new GLTFLoader().setPath('model/').load('castle.glb', (gltf) => {
+                    // console.log(gltf);
+                    gltf.scene.scale.set(2, 2, 2)
+                    gltf.scene.position.set(0, 2.5, 0)
+                    gltf.scene.traverse((obj) => {
+                        if(obj.isMesh){
+                            obj.castShadow = true
+                        }
+                    })
+
+                    scene.add(gltf.scene)
+                })
+            }
+            loadModel()
+
+
+            const planeGeometry = new THREE.PlaneGeometry(100, 100);
+            const planeMaterial = new THREE.MeshLambertMaterial({
+                color: 0xcccccc,
+            });
+            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            plane.rotation.x = -0.5 * Math.PI;
+            plane.position.set(15, 0, 0);
+            plane.receiveShadow = true;
+            scene.add(plane);
+
+            //
+            const ambienLight = new THREE.AmbientLight(0xaaaaaa, 1);
+            // scene.add(ambienLight);
+
+            // 光照颜色， 光照强度，光源发出光的最大距离, 光线散射角度，聚光锥的半影衰减百分比，沿着光照距离的衰减量
+            const spotLight = new THREE.SpotLight(0xffffff);
+            spotLight.position.set(-60, 45, -65);
+            spotLight.castShadow = true;
+            spotLight.shadow.mapSize = new THREE.Vector2(1024, 1024);
+            spotLight.shadow.camera.far = 130;
+            spotLight.shadow.camera.near = 40;
+            // scene.add(spotLight);
+
+            // 光照颜色 (0xffffff)   
+            // 光照强度 (1)  
+            // 从光源到光照强度为0的位置(0) 
+            // 沿着光照距离的衰退量(1)
+            const pointLight = new THREE.PointLight(0xffffff, 6, 160)
+            pointLight.position.set(0, 0, 2)
+            scene.add(pointLight)
+
+            //平等光源 类似太阳光
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 2)
+            directionalLight.castShadow = true
+            directionalLight.shadow.mapSize.width = 2048
+            directionalLight.shadow.mapSize.height = 2048
+            directionalLight.position.set(10, 10, 10)
+            scene.add(directionalLight)
+
+            const directionalHelper = new THREE.DirectionalLightHelper(directionalLight, 5)
+            // scene.add(directionalHelper)
+
+            const dirCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera)
+            // scene.add(dirCameraHelper)
+
+            //半球光光源  考虑到天空和地面的颜色，更自然
+            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x00ff00, 1)
+            scene.add(hemisphereLight)
+            
+
+
+            const ctrlObj = {
+                pointColor: 0xffffff,
+                pointIntensity: 6,
+                pointDistance: 60,
+                pointdecay: 1,
+                pointLightVisible: true,
+
+                directionalColor: 0xffffff,
+                directionalIntensity: 1, 
+                directionalLightVisible: true,
+
+                hemisphereLightVisible: true,
+                hemisphereSkyColor: 0xffffff,
+                hemisphereGroundColor: 0x00ff00,
+                hemisphereIntensity: 1
+            }
+            const ctrl = new dat.GUI()
+            const pointLightFolder = ctrl.addFolder('pointLight')
+            pointLightFolder.addColor(ctrlObj, 'pointColor').onChange((crl) => {
+                pointLight.color = new THREE.Color(crl)
+            })
+            pointLightFolder.add(ctrlObj, 'pointIntensity', 0, 10).onChange((int) => {
+                pointLight.intensity = int
+            })
+            pointLightFolder.add(ctrlObj, 'pointDistance', 0, 1000).onChange((dis) => {
+                pointLight.distance = dis
+            })
+            pointLightFolder.add(ctrlObj, 'pointdecay', 0, 100).onChange((decay) => {
+                pointLight.decay = decay
+            })
+            pointLightFolder.add(ctrlObj, 'pointLightVisible').onChange((boo) => {
+                pointLight.visible = boo
+            })
+
+            const directionalLightFolder = ctrl.addFolder('directionalLight')
+            directionalLightFolder.addColor(ctrlObj, 'directionalColor').onChange((crl) => {
+                directionalLight.color = new THREE.Color(crl)
+            })
+            directionalLightFolder.add(ctrlObj, 'directionalIntensity', 0, 10).onChange((int) => {
+                directionalLight.intensity = int
+            })
+            directionalLightFolder.add(ctrlObj, 'directionalLightVisible').onChange((boo) => {
+                directionalLight.visible = boo
+                sphereMesh.visible = boo
+            })
+
+            const hemisphereLightFolder = ctrl.addFolder('hemisphereLight')
+            hemisphereLightFolder.add(ctrlObj, 'hemisphereLightVisible').onChange((boo) => {
+                hemisphereLight.visible = boo
+            })
+            hemisphereLightFolder.addColor(ctrlObj, 'hemisphereSkyColor').onChange((crl) => {
+                hemisphereLight.color = new THREE.Color(crl)
+            })
+            hemisphereLightFolder.addColor(ctrlObj, 'hemisphereGroundColor').onChange((crl) => {
+                hemisphereLight.groundColor = new THREE.Color(crl)
+            })
+            hemisphereLightFolder.add(ctrlObj, 'hemisphereIntensity', 0, 10).onChange((int) => {
+                hemisphereLight.intensity = int
+            })
+
+
+            //创建轨道控制器
+            const orbitControls = new OrbitControls(camera, render.domElement)
+            orbitControls.update()
+
+
+            let pos = 0
+            const renderScene = () => {
+
+                orbitControls.update()
+
+                render.render(scene, camera);
+                
+                requestAnimationFrame(renderScene);
+            };
+            renderScene();
+
+            const onWindowResize = () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                render.setSize(window.innerWidth, window.innerHeight);
+            };
+
+            window.addEventListener("resize", onWindowResize);
+
+
+            
+
+
+        </script>
+    </body>
+</html>
