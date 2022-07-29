@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+        <style>
+            body {
+                margin: 0;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="webgl-output"></div>
+        <script type="module">
+            import * as THREE from "./libs/build/three.module.js";
+
+            import { GLTFLoader } from './libs/loaders/GLTFLoader.js'
+
+            import {OrbitControls} from './libs/controls/OrbitControls.js'
+
+            import { Lensflare, LensflareElement } from './libs/objects/Lensflare.js'
+
+            import Stats from "./libs/stats/stats.module.js";
+
+            import dat from "./libs/dat.gui/dat.gui.module.js";
+
+            const scene = new THREE.Scene();
+
+            let camera = new THREE.PerspectiveCamera(
+                75, //能看到的视角
+                window.innerWidth / window.innerHeight, //渲染的长宽比
+                0.1,
+                1000 //场景渲染的最远位置
+            );
+
+            camera.position.x = -15;
+            camera.position.y = 20;
+            camera.position.z = 15;
+            camera.lookAt(scene.position);
+
+            const render = new THREE.WebGLRenderer();
+            render.setSize(window.innerWidth, window.innerHeight);
+            render.shadowMap.enabled = true;
+
+            document
+                .getElementById("webgl-output")
+                .appendChild(render.domElement);
+
+            const axes = new THREE.AxesHelper(50);
+            scene.add(axes);
+
+            const loadModel = () => {
+                new GLTFLoader().setPath('model/').load('castle.glb', (gltf) => {
+                    // console.log(gltf);
+                    gltf.scene.scale.set(2, 2, 2)
+                    gltf.scene.position.set(0, 2.5, 0)
+                    gltf.scene.traverse((obj) => {
+                        if(obj.isMesh){
+                            obj.castShadow = true
+                        }
+                    })
+
+                    scene.add(gltf.scene)
+                })
+            }
+            loadModel()
+
+
+            const planeGeometry = new THREE.PlaneGeometry(100, 100);
+            const planeMaterial = new THREE.MeshLambertMaterial({
+                color: 0xcccccc,
+            });
+            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            plane.rotation.x = -0.5 * Math.PI;
+            plane.position.set(15, 0, 0);
+            plane.receiveShadow = true;
+            scene.add(plane);
+
+            //
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 4)
+            directionalLight.castShadow = true
+            directionalLight.shadow.mapSize.width = 2048
+            directionalLight.shadow.mapSize.height = 2048
+            directionalLight.position.set(10, 10, 10)
+            scene.add(directionalLight)
+
+            //半球光光源  考虑到天空和地面的颜色，更自然
+            const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x00ff00, 1)
+            hemisphereLight.position.set(100, 50, 100)
+            scene.add(hemisphereLight)
+
+            //
+            const textureLoader = new THREE.TextureLoader()
+            const textureFlare1 = textureLoader.load('texture/g.jpeg')
+            const textureFlare2 = textureLoader.load('texture/a.jpeg')
+
+            const lensflare = new Lensflare()
+            lensflare.addElement(new LensflareElement(textureFlare1, 500, 0))
+            lensflare.addElement(new LensflareElement(textureFlare2, 60, 0.1))
+
+            const lensflareEl = new LensflareElement(textureFlare2, 30, 0.2)
+            lensflare.addElement(lensflareEl)
+            hemisphereLight.add(lensflare)
+
+
+            const ctrlObj = {
+                directionalColor: 0xffffff,
+                directionalIntensity: 1, 
+                directionalLightVisible: true,
+
+                hemisphereLightVisible: true,
+                hemisphereSkyColor: 0xffffff,
+                hemisphereGroundColor: 0x00ff00,
+                hemisphereIntensity: 1, 
+
+                lensflareElSize: 30,
+                lensflareElDistance: 0.2,
+                lensflareElColor: 0xffffff
+            }
+            const ctrl = new dat.GUI()
+
+            const hemisphereLightFolder = ctrl.addFolder('hemisphereLight')
+            hemisphereLightFolder.add(ctrlObj, 'hemisphereLightVisible').onChange((boo) => {
+                hemisphereLight.visible = boo
+            })
+            hemisphereLightFolder.addColor(ctrlObj, 'hemisphereSkyColor').onChange((crl) => {
+                hemisphereLight.color = new THREE.Color(crl)
+            })
+            hemisphereLightFolder.addColor(ctrlObj, 'hemisphereGroundColor').onChange((crl) => {
+                hemisphereLight.groundColor = new THREE.Color(crl)
+            })
+            hemisphereLightFolder.add(ctrlObj, 'hemisphereIntensity', 0, 10).onChange((int) => {
+                hemisphereLight.intensity = int
+            })
+
+            const directionalLightFolder = ctrl.addFolder('directionalLight')
+            directionalLightFolder.addColor(ctrlObj, 'directionalColor').onChange((crl) => {
+                directionalLight.color = new THREE.Color(crl)
+            })
+            directionalLightFolder.add(ctrlObj, 'directionalIntensity', 0, 10).onChange((int) => {
+                directionalLight.intensity = int
+            })
+            directionalLightFolder.add(ctrlObj, 'directionalLightVisible').onChange((boo) => {
+                directionalLight.visible = boo
+                sphereMesh.visible = boo
+            })
+
+            const lensflareFolder = ctrl.addFolder('lensflare')
+            lensflareFolder.add(ctrlObj, 'lensflareSize', 0, 60).onChange((size) => {
+                lensflareEl.size = size
+            })
+            lensflareFolder.add(ctrlObj, 'lensflareDistance', 0, 1).onChange((dis) => {
+                lensflareEl.distance = dis
+            })
+            lensflareFolder.addColor(ctrlObj, 'lensflareElColor').onChange((crl) => {
+                lensflareEl.color = new THREE.Color(crl)
+            })
+
+
+            //创建轨道控制器
+            const orbitControls = new OrbitControls(camera, render.domElement)
+            orbitControls.update()
+
+
+
+            const renderScene = () => {
+
+                orbitControls.update()
+
+                render.render(scene, camera);
+                
+                requestAnimationFrame(renderScene);
+            };
+            renderScene();
+
+            const onWindowResize = () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                render.setSize(window.innerWidth, window.innerHeight);
+            };
+
+            window.addEventListener("resize", onWindowResize);
+
+
+            
+
+
+        </script>
+    </body>
+</html>
