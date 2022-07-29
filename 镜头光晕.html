@@ -149,14 +149,14 @@
             })
 
             const lensflareFolder = ctrl.addFolder('lensflare')
-            lensflareFolder.add(ctrlObj, 'lensflareSize', 0, 60).onChange((size) => {
+            lensflareFolder.add(ctrlObj, 'lensflareElSize', 0, 60).onChange((size) => {
                 lensflareEl.size = size
             })
-            lensflareFolder.add(ctrlObj, 'lensflareDistance', 0, 1).onChange((dis) => {
+            lensflareFolder.add(ctrlObj, 'lensflareElDistance', 0, 1).onChange((dis) => {
                 lensflareEl.distance = dis
             })
-            lensflareFolder.addColor(ctrlObj, 'lensflareElColor').onChange((crl) => {
-                lensflareEl.color = new THREE.Color(crl)
+            lensflareFolder.addColor(ctrlObj, 'lensflareElColor').onChange((e) => {
+                lensflareEl.color = new THREE.Color(e)
             })
 
 
